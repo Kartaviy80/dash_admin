@@ -24,12 +24,19 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900">Моніторинг роботи ЦНАП м. Дніпра</h1>
-                    <p class="text-sm text-slate-500" id="periodText">Завантаження та аналіз Excel-файлу...</p>
+                    <p class="text-sm text-slate-500" id="periodText">Період: 01.01.2022 – 28.08.2026</p>
                 </div>
             </div>
             
             <div class="flex flex-wrap items-center gap-3">
-                <!-- Фільтр по відділам -->
+                <!-- Ручная загрузка файла -->
+                <label class="bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 font-semibold text-sm px-4 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                    <span>Обрати Excel-файл</span>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden">
+                </label>
+
+                <!-- Фильтр отделов -->
                 <select id="branchSelect" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl px-4 py-2.5 font-medium focus:ring-2 focus:ring-blue-500 outline-none">
                     <option value="ALL">Усі відділи ЦНАП</option>
                 </select>
@@ -37,12 +44,11 @@
         </header>
 
         <!-- Status Alert -->
-        <div id="statusAlert" class="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center justify-between shadow-sm">
+        <div id="statusAlert" class="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl flex items-center justify-between shadow-sm">
             <div class="flex items-center gap-3">
-                <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 shrink-0"></i>
-                <span id="statusText" class="text-sm font-medium">Обробка даних...</span>
+                <i data-lucide="info" class="w-5 h-5 text-amber-600 shrink-0"></i>
+                <span id="statusText" class="text-sm font-medium">Спроба авто-завантаження Excel... Если файл не подтянулся, нажмите «Обрати Excel-файл» выше.</span>
             </div>
-            <span class="text-xs bg-emerald-200 text-emerald-900 px-2.5 py-1 rounded-full font-bold">Авто-підтягування</span>
         </div>
 
         <!-- Metrics Cards Grid -->
@@ -165,31 +171,54 @@
     <script>
         lucide.createIcons();
 
-        // Назва файла в папе
-        const EXCEL_FILE_NAME = 'Детальний_звіт_по_роботі_ЦНАП_з_01_01_2022_по_28_08_2026_docx_2.xlsx';
-
         let globalData = [];
         let topChartInstance = null;
         let statusChartInstance = null;
         let branchChartInstance = null;
 
-        // Автоматична загрузка при открытии страницы
+        // 1. Автоматическая попытка загрузить файл, если запущено через веб-сервер
         window.addEventListener('DOMContentLoaded', () => {
-            fetch(EXCEL_FILE_NAME)
+            const possibleNames = [
+                'Детальний_звіт_по_роботі_ЦНАП_з_01_01_2022_по_28_08_2026_docx_2.xlsx',
+                'Детальний_звіт_по_роботі_ЦНАП_з_01_01_2022_по_28_08_2026_docx_2.xlsx'
+            ];
+            
+            tryFetchFile(possibleNames, 0);
+        });
+
+        function tryFetchFile(names, index) {
+            if (index >= names.length) {
+                document.getElementById('statusAlert').className = "mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl flex items-center justify-between shadow-sm";
+                document.getElementById('statusText').innerText = 'Натисніть кнопку "Обрати Excel-файл" у правому верхньому куті, щоб відкрити звіт з ПК.';
+                return;
+            }
+
+            fetch(names[index])
                 .then(res => {
-                    if (!res.ok) throw new Error('Не вдалося знайти файл в папці');
+                    if (!res.ok) throw new Error();
                     return res.arrayBuffer();
                 })
                 .then(buffer => {
                     parseExcelData(buffer);
                 })
-                .catch(err => {
-                    document.getElementById('statusAlert').className = "mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3";
-                    document.getElementById('statusText').innerText = `Помилка авто-підтягування: Файл "${EXCEL_FILE_NAME}" не знайдено в паці. Запустіть через локальний сервер або GitHub Pages.`;
+                .catch(() => {
+                    tryFetchFile(names, index + 1);
                 });
+        }
+
+        // 2. Загрузка через выбор файла вручную (для открытия напрямую двойным кликом)
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                parseExcelData(evt.target.result);
+            };
+            reader.readAsArrayBuffer(file);
         });
 
-        // Парсер структуры файла ЦНАП
+        // Парсер структуры Excel файла ЦНАП
         function parseExcelData(buffer) {
             const data = new Uint8Array(buffer);
             const workbook = XLSX.read(data, { type: 'array' });
@@ -200,7 +229,6 @@
             let currentSubOrgan = "";
             const parsedServices = [];
 
-            // Проходим по всем строкам отчета начиная с 13 строки
             for (let i = 13; i < rows.length; i++) {
                 const row = rows[i];
                 const col0 = String(row[0] || '').trim();
@@ -209,7 +237,7 @@
 
                 if (!col0) continue;
 
-                // Если col1 пустой и в col4 нет знака '%', это НАЗВАНИЕ ВІДДІЛУ ЦНАП
+                // Определение названия отдела
                 if ((col1 === '' || col1 === undefined) && !col4.includes('%')) {
                     if (col0.includes('Центр надання адміністративних послуг')) {
                         currentBranch = col0.replace('Центр надання адміністративних послуг м. Дніпра', '').trim();
@@ -218,10 +246,9 @@
                     continue;
                 }
 
-                // Пропускаем строки с процентами %
+                // Пропуск % строк
                 if (col4.includes('%')) continue;
 
-                // Парсим числовые данные
                 const reg = parseInt(col1) || 0;
                 if (isNaN(reg) || reg === 0) continue;
 
@@ -232,11 +259,9 @@
                 const unreviewed = parseInt(row[10]) || 0;
                 const rejected = refOrg + refApp;
 
-                // Если это субъект (АО) - сохраняем имя органа
                 if (col0.startsWith('АО ')) {
                     currentSubOrgan = col0;
                 } else {
-                    // Это конкретная услуга
                     parsedServices.push({
                         branch: currentBranch,
                         subOrgan: currentSubOrgan,
@@ -252,18 +277,17 @@
 
             globalData = parsedServices;
 
-            // Заполняем выпадающий список отделов
             populateBranchSelect();
 
-            // Обновляем статус и выводим метрики
-            document.getElementById('statusText').innerText = `Успішно підтягнуто файл. Оброблено ${parsedServices.length.toLocaleString('uk-UA')} послуг.`;
-            document.getElementById('periodText').innerText = `Період з 01.01.2022 до 28.08.2026 | Всього послуг: ${parsedServices.length}`;
+            document.getElementById('statusAlert').className = "mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center justify-between shadow-sm";
+            document.getElementById('statusText').innerText = `Успішно завантажено! Оброблено ${parsedServices.length.toLocaleString('uk-UA')} послуг з файлу.`;
 
             renderDashboard('ALL');
         }
 
         function populateBranchSelect() {
             const select = document.getElementById('branchSelect');
+            select.innerHTML = '<option value="ALL">Усі відділи ЦНАП</option>';
             const branches = [...new Set(globalData.map(item => item.branch))];
 
             branches.forEach(b => {
@@ -273,9 +297,7 @@
                 select.appendChild(opt);
             });
 
-            select.addEventListener('change', (e) => {
-                renderDashboard(e.target.value);
-            });
+            select.onchange = (e) => renderDashboard(e.target.value);
         }
 
         function renderDashboard(selectedBranch) {
@@ -283,7 +305,6 @@
                 ? globalData 
                 : globalData.filter(d => d.branch === selectedBranch);
 
-            // Агрегация KPI
             let totalReg = 0, totalIssued = 0, totalRejected = 0, totalPending = 0, totalUnreviewed = 0;
             const serviceMap = {};
 
@@ -297,7 +318,6 @@
                 serviceMap[item.service] = (serviceMap[item.service] || 0) + item.reg;
             });
 
-            // Карточки
             document.getElementById('statTotal').innerText = totalReg.toLocaleString('uk-UA');
             document.getElementById('statIssued').innerText = totalIssued.toLocaleString('uk-UA');
             document.getElementById('statPending').innerText = (totalPending + totalUnreviewed).toLocaleString('uk-UA');
@@ -310,7 +330,6 @@
             document.getElementById('statPendingDetail').innerText = `${totalPending} в роботі, ${totalUnreviewed} не розглянуто`;
             document.getElementById('statRejectedPercent').innerText = `${rejectedPct}% від загальної кількості`;
 
-            // ТОП 10 услуг
             const sortedServices = Object.entries(serviceMap)
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 10);
