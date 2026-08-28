@@ -3,483 +3,344 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Аналітичний Дашборд ЦНАП</title>
+    <title>Моніторинг роботи ЦНАП</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
+    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS for parsing XLSX/CSV -->
+    <!-- SheetJS (xlsx) CDN -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-    </style>
 </head>
-<body class="min-h-screen flex flex-col antialiased">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
 
-    <!-- Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div class="flex items-center gap-3">
-                <div class="p-2 bg-blue-600 rounded-xl text-white shadow-md shadow-blue-500/20">
-                    <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
+                <div class="bg-blue-600 text-white p-3 rounded-xl shadow-md">
+                    <i data-lucide="layout-grid" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-slate-800 leading-tight">Моніторинг роботи ЦНАП</h1>
-                    <p class="text-xs text-slate-500" id="report-period">Звітний період: завантаження...</p>
+                    <h1 class="text-2xl font-bold text-slate-900">Моніторинг роботи ЦНАП</h1>
+                    <p class="text-sm text-slate-500" id="periodText">Очікується завантаження файла...</p>
                 </div>
             </div>
-
+            
             <div class="flex items-center gap-3">
-                <label for="excelFile" class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all border border-slate-200">
-                    <i data-lucide="upload" class="w-4 h-4 text-slate-600"></i>
+                <label class="cursor-pointer bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl shadow-sm text-sm font-medium flex items-center gap-2 transition-colors">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
                     <span>Завантажити Excel</span>
-                    <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" class="hidden">
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" />
                 </label>
-                <button onclick="reloadDefault()" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all border border-blue-200">
-                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                    <span>Авто-пошук файлу</span>
-                </button>
             </div>
+        </header>
+
+        <!-- Status Alert -->
+        <div id="statusAlert" class="hidden mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 shadow-sm">
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 shrink-0"></i>
+            <span id="statusText" class="text-sm font-medium"></span>
         </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-
-        <!-- Status / Alert Bar -->
-        <div id="file-status" class="hidden p-4 rounded-xl border flex items-center gap-3 text-sm"></div>
-
-        <!-- KPI Cards Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <!-- Total Cases -->
-            <div class="glass-card rounded-2xl p-5 hover:shadow-lg transition-all border-l-4 border-l-blue-500">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Зареєстровано справ</span>
-                    <div class="p-2.5 bg-blue-50 rounded-xl text-blue-600">
+        <!-- Metrics Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- Card 1 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+                <div class="border-l-4 border-blue-500 absolute top-0 left-0 bottom-0"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <span class="text-xs font-bold tracking-wider text-slate-400 uppercase">ЗАРЕЄСТРОВАНО СПРАВ</span>
+                    <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
                         <i data-lucide="file-text" class="w-5 h-5"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-bold text-slate-800" id="kpi-total">0</div>
-                <p class="text-xs text-slate-500 mt-2 flex items-center gap-1">
-                    <i data-lucide="database" class="w-3.5 h-3.5 text-blue-500"></i>
+                <div class="text-3xl font-extrabold text-slate-900 mb-1" id="statTotal">0</div>
+                <div class="text-xs text-slate-500 flex items-center gap-1">
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-slate-400"></i>
                     <span>Всього звернень громадян</span>
-                </p>
+                </div>
             </div>
 
-            <!-- Total Issued -->
-            <div class="glass-card rounded-2xl p-5 hover:shadow-lg transition-all border-l-4 border-l-emerald-500">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Видано документів</span>
-                    <div class="p-2.5 bg-emerald-50 rounded-xl text-emerald-600">
+            <!-- Card 2 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+                <div class="border-l-4 border-emerald-500 absolute top-0 left-0 bottom-0"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <span class="text-xs font-bold tracking-wider text-slate-400 uppercase">ВИДАНО ДОКУМЕНТІВ</span>
+                    <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
                         <i data-lucide="check-circle-2" class="w-5 h-5"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-bold text-slate-800" id="kpi-issued">0</div>
-                <p class="text-xs text-emerald-600 font-medium mt-2 flex items-center gap-1" id="kpi-issued-pct">
+                <div class="text-3xl font-extrabold text-slate-900 mb-1" id="statIssued">0</div>
+                <div class="text-xs text-emerald-600 flex items-center gap-1 font-medium">
                     <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
-                    <span>0% успішно виконано</span>
-                </p>
+                    <span id="statIssuedPercent">0% успішно виконано</span>
+                </div>
             </div>
 
-            <!-- In Progress / Pending -->
-            <div class="glass-card rounded-2xl p-5 hover:shadow-lg transition-all border-l-4 border-l-amber-500">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">На розгляді / В роботі</span>
-                    <div class="p-2.5 bg-amber-50 rounded-xl text-amber-600">
+            <!-- Card 3 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+                <div class="border-l-4 border-amber-500 absolute top-0 left-0 bottom-0"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <span class="text-xs font-bold tracking-wider text-slate-400 uppercase">НА РОЗГЛЯДІ / В РОБОТІ</span>
+                    <div class="p-2 bg-amber-50 rounded-lg text-amber-600">
                         <i data-lucide="clock" class="w-5 h-5"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-bold text-slate-800" id="kpi-pending">0</div>
-                <p class="text-xs text-amber-600 font-medium mt-2" id="kpi-pending-sub">
-                    0 в процесі опрацювання
-                </p>
+                <div class="text-3xl font-extrabold text-slate-900 mb-1" id="statPending">0</div>
+                <div class="text-xs text-amber-600 flex items-center gap-1 font-medium">
+                    <span id="statPendingDetail">0 на розгляді</span>
+                </div>
             </div>
 
-            <!-- Refusals -->
-            <div class="glass-card rounded-2xl p-5 hover:shadow-lg transition-all border-l-4 border-l-rose-500">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Відмови</span>
-                    <div class="p-2.5 bg-rose-50 rounded-xl text-rose-600">
+            <!-- Card 4 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+                <div class="border-l-4 border-rose-500 absolute top-0 left-0 bottom-0"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <span class="text-xs font-bold tracking-wider text-slate-400 uppercase">ВІДМОВИ</span>
+                    <div class="p-2 bg-rose-50 rounded-lg text-rose-600">
                         <i data-lucide="x-circle" class="w-5 h-5"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-bold text-slate-800" id="kpi-refusals">0</div>
-                <p class="text-xs text-rose-600 font-medium mt-2" id="kpi-refusals-pct">
-                    0% від загальної кількості
-                </p>
+                <div class="text-3xl font-extrabold text-slate-900 mb-1" id="statRejected">0</div>
+                <div class="text-xs text-rose-600 flex items-center gap-1 font-medium">
+                    <span id="statRejectedPercent">0% від загальної кількості</span>
+                </div>
             </div>
         </div>
 
-        <!-- Charts Section -->
+        <!-- Charts Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Main Chart: Top Services -->
-            <div class="glass-card rounded-2xl p-6 lg:col-span-2 flex flex-col justify-between">
-                <div class="flex items-center justify-between mb-4">
+            <!-- Top Services Bar Chart -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex justify-between items-center mb-6">
                     <div>
-                        <h2 class="text-base font-bold text-slate-800">ТОП-10 найпопулярніших послуг</h2>
+                        <h3 class="text-lg font-bold text-slate-900">ТОП-10 найпопулярніших послуг</h3>
                         <p class="text-xs text-slate-500">Розподіл за кількістю поданих заявок</p>
                     </div>
-                    <div class="p-2 bg-slate-100 rounded-lg text-slate-600">
+                    <div class="p-2 bg-slate-50 rounded-lg text-slate-400">
                         <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
                     </div>
                 </div>
-                <div class="relative h-72 w-full">
+                <div class="relative h-80">
                     <canvas id="topServicesChart"></canvas>
                 </div>
             </div>
 
-            <!-- Secondary Chart: Structure / Breakdown -->
-            <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
-                <div class="flex items-center justify-between mb-4">
+            <!-- Status Doughnut Chart -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex justify-between items-center mb-6">
                     <div>
-                        <h2 class="text-base font-bold text-slate-800">Статус виконання</h2>
+                        <h3 class="text-lg font-bold text-slate-900">Статус виконання</h3>
                         <p class="text-xs text-slate-500">Співвідношення результатів</p>
                     </div>
-                    <div class="p-2 bg-slate-100 rounded-lg text-slate-600">
+                    <div class="p-2 bg-slate-50 rounded-lg text-slate-400">
                         <i data-lucide="pie-chart" class="w-5 h-5"></i>
                     </div>
                 </div>
-                <div class="relative h-64 w-full flex items-center justify-center">
-                    <canvas id="statusPieChart"></canvas>
+                <div class="relative h-80 flex items-center justify-center">
+                    <canvas id="statusChart"></canvas>
                 </div>
             </div>
         </div>
-
-        <!-- Timeliness Breakdown Chart -->
-        <div class="glass-card rounded-2xl p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h2 class="text-base font-bold text-slate-800">Дотримання термінів надання послуг</h2>
-                    <p class="text-xs text-slate-500">Порівняння видачі документів вчасно та з порушенням термінів за напрямками</p>
-                </div>
-                <div class="p-2 bg-slate-100 rounded-lg text-slate-600">
-                    <i data-lucide="timer" class="w-5 h-5"></i>
-                </div>
-            </div>
-            <div class="relative h-64 w-full">
-                <canvas id="timelinessChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Interactive Data Table -->
-        <div class="glass-card rounded-2xl p-6 space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-base font-bold text-slate-800">Деталізований реестр послуг</h2>
-                    <p class="text-xs text-slate-500">Повний перелік з можливістю пошуку та фільтрації</p>
-                </div>
-                
-                <div class="flex items-center gap-3">
-                    <div class="relative min-w-[240px]">
-                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" id="searchInput" placeholder="Пошук послуги або органу..." 
-                            class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
-                    </div>
-                    <span id="record-count" class="text-xs font-semibold px-2.5 py-1.5 bg-slate-100 text-slate-600 rounded-lg whitespace-nowrap">
-                        0 записів
-                    </span>
-                </div>
-            </div>
-
-            <!-- Table -->
-            <div class="overflow-x-auto custom-scrollbar border border-slate-200 rounded-xl">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-slate-100/80 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider">
-                            <th class="p-3 min-w-[280px]">Послуга / Орган</th>
-                            <th class="p-3 text-right">Зареєстровано</th>
-                            <th class="p-3 text-right">Видано</th>
-                            <th class="p-3 text-right text-emerald-600">Вчасно</th>
-                            <th class="p-3 text-right text-rose-600">З поруш.</th>
-                            <th class="p-3 text-right text-rose-700">Відмови</th>
-                            <th class="p-3 text-right text-amber-600">На розгляді</th>
-                            <th class="p-3 text-right">Ефективність</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-600">
-                        <tr>
-                            <td colspan="8" class="p-8 text-center text-slate-400">
-                                <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>
-                                Завантаження та обробка даних...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-            Автоматизований аналітичний дашборд ЦНАП • Згенеровано локально
-        </div>
-    </footer>
+    </div>
 
     <script>
-        // Global variables & charts
-        let rawData = [];
-        let parsedRows = [];
-        let topServicesChartInstance = null;
-        let statusPieChartInstance = null;
-        let timelinessChartInstance = null;
+        // Ініціалізація іконок Lucide
+        lucide.createIcons();
 
-        // Auto-run on load
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            
-            // Try to auto-fetch default Excel/CSV file in root
-            fetchDefaultData();
+        let topChartInstance = null;
+        let statusChartInstance = null;
 
-            // Setup file input listener
-            document.getElementById('excelFile').addEventListener('change', handleFileSelect);
-
-            // Setup search listener
-            document.getElementById('searchInput').addEventListener('input', (e) => {
-                filterAndRenderTable(e.target.value);
-            });
+        // Автозавантаження файла з папки (якщо запуск через локальний веб-сервер або GitHub Pages)
+        window.addEventListener('DOMContentLoaded', () => {
+            const defaultFileName = 'Детальний_звіт_по_роботі_ЦНАП_з_01_01_2022_по_28_08_2026_docx.xlsx';
+            fetch(defaultFileName)
+                .then(res => {
+                    if (!res.ok) throw new Error('File not found');
+                    return res.arrayBuffer();
+                })
+                .then(buffer => processExcelBuffer(buffer, defaultFileName))
+                .catch(err => console.log('Автопошук локального файла очікує ручного завантаження користувачем.'));
         });
 
-        const DEFAULT_FILENAMES = [
-            'Детальний_звіт_по_роботі_ЦНАП_з_01_01_2022_по_28_08_2026_docx.xlsx - Лист1.csv',
-            'Детальний_звіт_по_роботі_ЦНАП_з_01_01_2022_по_28_08_2026_docx.xlsx',
-            'data.xlsx',
-            'data.csv'
-        ];
-
-        async function fetchDefaultData() {
-            showStatus('Шукаємо Excel файл у директорії...', 'info');
-            for (let name of DEFAULT_FILENAMES) {
-                try {
-                    const response = await fetch(name);
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            processArrayBuffer(e.target.result);
-                            showStatus(`Успішно завантажено файл: <b>${name}</b>`, 'success');
-                        };
-                        reader.readAsArrayBuffer(blob);
-                        return;
-                    }
-                } catch (err) {
-                    // continue search
-                }
-            }
-            showStatus('Автоматичний файл не знайдено. Будь ласка, оберіть файл вручну через кнопку "Завантажити Excel".', 'warning');
-        }
-
-        function reloadDefault() {
-            fetchDefaultData();
-        }
-
-        function handleFileSelect(e) {
+        // Слухач вибору файла через кнопку
+        document.getElementById('excelFileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            showStatus(`Обробка файлу: <b>${file.name}</b>...`, 'info');
+
             const reader = new FileReader();
-            reader.onload = (evt) => {
-                processArrayBuffer(evt.target.result);
-                showStatus(`Файл <b>${file.name}</b> успішно оброблено!`, 'success');
+            reader.onload = function(evt) {
+                processExcelBuffer(evt.target.result, file.name);
             };
             reader.readAsArrayBuffer(file);
-        }
+        });
 
-        function showStatus(msg, type) {
-            const el = document.getElementById('file-status');
-            el.classList.remove('hidden', 'bg-blue-50', 'text-blue-700', 'border-blue-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200', 'bg-amber-50', 'text-amber-700', 'border-amber-200');
-            
-            if (type === 'success') {
-                el.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
-            } else if (type === 'warning') {
-                el.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200');
-            } else {
-                el.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
-            }
-            el.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'info'}" class="w-5 h-5 flex-shrink-0"></i> <div>${msg}</div>`;
-            lucide.createIcons();
-        }
+        // Основна функція обробки файлу
+        function processExcelBuffer(buffer, fileName) {
+            const data = new Uint8Array(buffer);
+            const workbook = XLSX.read(data, { type: 'array' });
 
-        function processArrayBuffer(buffer) {
-            const workbook = XLSX.read(buffer, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            
-            parseDataStructure(json);
-        }
+            // Шукаємо лист із даними (перший доступний)
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
 
-        function parseDataStructure(rows) {
-            parsedRows = [];
-            let currentDept = 'Загальний напрямок';
-            
-            let totalReg = 0;
-            let totalIssued = 0;
-            let totalInTime = 0;
-            let totalLate = 0;
-            let totalRefusals = 0;
-            let totalPending = 0;
-            let totalNotExamined = 0;
+            // Конвертуємо у формат JSON (масив об'єктів або масив масивів)
+            const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-            // Detect dates or headers
-            for (let r = 0; r < Math.min(10, rows.length); r++) {
-                const rowStr = (rows[r] || []).join(' ');
-                if (rowStr.includes('період з')) {
-                    document.getElementById('report-period').innerText = rowStr.trim();
-                }
+            if (!rawData || rawData.length === 0) {
+                alert('Файл порожній або не вдалося зчитати дані!');
+                return;
             }
 
-            // Loop through data rows (skip initial metadata rows)
-            for (let r = 0; r < rows.length; r++) {
-                const row = rows[r] || [];
-                const name = row[0] ? String(row[0]).trim() : '';
+            // Парсинг даних ЦНАП
+            const parsedData = parseCnapData(rawData);
+            
+            // Оновлення інтерфейсу
+            showStatusSuccess(`Успішно завантажено файл: ${fileName}`);
+            updateDashboard(parsedData);
+        }
 
-                // Skip headers or empty lines
-                if (!name || name.startsWith('Детальний звіт') || name.startsWith('за період') || name.startsWith('Дозвільний орган')) continue;
+        // Розумний парсер для пошуку потрібных колонок у звітах ЦНАП
+        function parseCnapData(rows) {
+            let headerRowIndex = -1;
+            let colService = -1;
+            let colStatus = -1;
+            let colDate = -1;
 
-                // Check if row contains numbers
-                const reg = parseInt(row[1]) || 0;
-                const stopped = parseInt(row[2]) || 0;
-                const answered = parseInt(row[3]) || 0;
-                const issuedTotal = parseInt(row[4]) || 0;
-                const issuedInTime = parseInt(row[5]) || 0;
-                const issuedLate = parseInt(row[6]) || 0;
-                const refOrgan = parseInt(row[7]) || 0;
-                const refUser = parseInt(row[8]) || 0;
-                const pending = parseInt(row[9]) || 0;
-                const notExamined = parseInt(row[10]) || 0;
-
-                const isPercentageRow = row.some(cell => String(cell).includes('%'));
-                if (isPercentageRow) continue;
-
-                // Is it a header section (department) or specific service?
-                if (reg === 0 && issuedTotal === 0 && pending === 0 && !row[1]) {
-                    currentDept = name;
-                } else if (reg > 0 || issuedTotal > 0 || pending > 0 || refOrgan > 0) {
-                    const totalRef = refOrgan + refUser;
-                    parsedRows.push({
-                        dept: currentDept,
-                        name: name,
-                        registered: reg,
-                        stopped: stopped,
-                        answered: answered,
-                        issued: issuedTotal,
-                        inTime: issuedInTime,
-                        late: issuedLate,
-                        refusals: totalRef,
-                        pending: pending,
-                        notExamined: notExamined
+            // Шукаємо рядок з заголовками таблицы
+            for (let i = 0; i < Math.min(rows.length, 25); i++) {
+                const rowStr = rows[i].join(' ').toLowerCase();
+                if (rowStr.includes('послуг') || rowStr.includes('назва') || rowStr.includes('статус') || rowStr.includes('результат')) {
+                    headerRowIndex = i;
+                    
+                    rows[i].forEach((cell, colIdx) => {
+                        const val = String(cell).toLowerCase().trim();
+                        if (val.includes('послуг') || val.includes('назва')) colService = colIdx;
+                        if (val.includes('статус') || val.includes('результат') || val.includes('стан')) colStatus = colIdx;
+                        if (val.includes('дата') || val.includes('період')) colDate = colIdx;
                     });
-
-                    totalReg += reg;
-                    totalIssued += issuedTotal;
-                    totalInTime += issuedInTime;
-                    totalLate += issuedLate;
-                    totalRefusals += totalRef;
-                    totalPending += pending;
-                    totalNotExamined += notExamined;
+                    break;
                 }
             }
 
-            // Update KPI Cards
-            document.getElementById('kpi-total').innerText = totalReg.toLocaleString('uk-UA');
-            document.getElementById('kpi-issued').innerText = totalIssued.toLocaleString('uk-UA');
-            
-            const issuedPct = totalReg > 0 ? ((totalIssued / totalReg) * 100).toFixed(1) : 0;
-            document.getElementById('kpi-issued-pct').innerHTML = `<i data-lucide="trending-up" class="w-3.5 h-3.5"></i> <span>${issuedPct}% успішно виконано</span>`;
+            // Якщо заголовки не знайдені явно, берем за замовчуванням (0 - Послуга, 1 - Статус)
+            if (colService === -1) colService = 0;
+            if (colStatus === -1) colStatus = 1;
 
-            document.getElementById('kpi-pending').innerText = (totalPending + totalNotExamined).toLocaleString('uk-UA');
-            document.getElementById('kpi-pending-sub').innerText = `${totalPending} на розгляді, ${totalNotExamined} не розглянуто`;
+            let total = 0;
+            let issued = 0;
+            let pending = 0;
+            let rejected = 0;
+            const servicesMap = {};
 
-            document.getElementById('kpi-refusals').innerText = totalRefusals.toLocaleString('uk-UA');
-            const refPct = totalReg > 0 ? ((totalRefusals / totalReg) * 100).toFixed(1) : 0;
-            document.getElementById('kpi-refusals-pct').innerText = `${refPct}% від загальної кількості`;
+            const startIdx = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
 
-            lucide.createIcons();
+            for (let i = startIdx; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
 
-            // Render Charts
-            renderCharts(parsedRows, totalIssued, totalInTime, totalLate, totalRefusals, totalPending + totalNotExamined);
+                const serviceName = String(row[colService] || '').trim();
+                const statusName = String(row[colStatus] || '').trim().toLowerCase();
 
-            // Render Table
-            filterAndRenderTable('');
+                // Игнорируем итоговые строки
+                if (!serviceName || serviceName.toLowerCase().includes('всього') || serviceName.toLowerCase().includes('разом')) {
+                    continue;
+                }
+
+                total++;
+
+                // Підраховуємо популярність послуг
+                servicesMap[serviceName] = (servicesMap[serviceName] || 0) + 1;
+
+                // Класифікація статусів
+                if (statusName.includes('видан') || statusName.includes('виконано') || statusName.includes('готов') || statusName.includes('задовол')) {
+                    issued++;
+                } else if (statusName.includes('відмов') || statusName.includes('скасован') || statusName.includes('не задовол')) {
+                    rejected++;
+                } else {
+                    pending++;
+                }
+            }
+
+            return { total, issued, pending, rejected, servicesMap };
         }
 
-        function renderCharts(items, totalIssued, totalInTime, totalLate, totalRefusals, totalPending) {
-            // 1. Top 10 Services
-            const sortedByReg = [...items].sort((a, b) => b.registered - a.registered).slice(0, 10);
-            
-            const ctxTop = document.getElementById('topServicesChart').getContext('2d');
-            if (topServicesChartInstance) topServicesChartInstance.destroy();
+        // Оновлення карток та графіків
+        function updateDashboard(data) {
+            const { total, issued, pending, rejected, servicesMap } = data;
 
-            topServicesChartInstance = new Chart(ctxTop, {
+            // Анімація карток
+            document.getElementById('statTotal').innerText = total.toLocaleString('uk-UA');
+            document.getElementById('statIssued').innerText = issued.toLocaleString('uk-UA');
+            document.getElementById('statPending').innerText = pending.toLocaleString('uk-UA');
+            document.getElementById('statRejected').innerText = rejected.toLocaleString('uk-UA');
+
+            const issuedPct = total > 0 ? ((issued / total) * 100).toFixed(1) : 0;
+            const rejectedPct = total > 0 ? ((rejected / total) * 100).toFixed(1) : 0;
+
+            document.getElementById('statIssuedPercent').innerText = `${issuedPct}% успішно виконано`;
+            document.getElementById('statPendingDetail').innerText = `${pending} в обробці`;
+            document.getElementById('statRejectedPercent').innerText = `${rejectedPct}% від загальної кількості`;
+            document.getElementById('periodText').innerText = `Оновлено! Оброблено ${total} записів.`;
+
+            // Подготовка данных для ТОП-10 услуг
+            const sortedServices = Object.entries(servicesMap)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            const topLabels = sortedServices.map(item => item[0].length > 40 ? item[0].substring(0, 37) + '...' : item[0]);
+            const topValues = sortedServices.map(item => item[1]);
+
+            renderTopServicesChart(topLabels, topValues);
+            renderStatusChart(issued, pending, rejected);
+        }
+
+        // Побудова горизонтального бар-чарта (ТОП-10)
+        function renderTopServicesChart(labels, values) {
+            const ctx = document.getElementById('topServicesChart').getContext('2d');
+            
+            if (topChartInstance) topChartInstance.destroy();
+
+            topChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: sortedByReg.map(i => i.name.length > 35 ? i.name.substring(0, 35) + '...' : i.name),
+                    labels: labels,
                     datasets: [{
-                        label: 'Зареєстровано справ',
-                        data: sortedByReg.map(i => i.registered),
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 6,
+                        label: 'Кількість заявок',
+                        data: values,
+                        backgroundColor: 'rgba(59, 130, 246, 0.85)',
+                        borderColor: '#2563eb',
+                        borderWidth: 1,
+                        borderRadius: 6
                     }]
                 },
                 options: {
+                    indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
-                    indexAxis: 'y',
                     plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                title: (items) => sortedByReg[items[0].dataIndex].name
-                            }
-                        }
+                        legend: { display: false }
                     },
                     scales: {
-                        x: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
-                        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                        x: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                        y: { ticks: { font: { size: 11 } } }
                     }
                 }
             });
+        }
 
-            // 2. Status Doughnut Chart
-            const ctxPie = document.getElementById('statusPieChart').getContext('2d');
-            if (statusPieChartInstance) statusPieChartInstance.destroy();
+        // Побудова кругової діаграми статусів
+        function renderStatusChart(issued, pending, rejected) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
 
-            statusPieChartInstance = new Chart(ctxPie, {
+            if (statusChartInstance) statusChartInstance.destroy();
+
+            statusChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Видано', 'На розгляді', 'Відмови'],
+                    labels: ['Видано', 'В роботі / На розгляді', 'Відмови'],
                     datasets: [{
-                        data: [totalIssued, totalPending, totalRefusals],
+                        data: [issued, pending, rejected],
                         backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
                         borderWidth: 2,
                         borderColor: '#ffffff'
@@ -489,92 +350,18 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } }
+                        legend: { position: 'bottom' }
                     },
                     cutout: '70%'
                 }
             });
-
-            // 3. Timeliness Breakdown Chart
-            const top5ForTimeliness = sortedByReg.slice(0, 5);
-            const ctxTime = document.getElementById('timelinessChart').getContext('2d');
-            if (timelinessChartInstance) timelinessChartInstance.destroy();
-
-            timelinessChartInstance = new Chart(ctxTime, {
-                type: 'bar',
-                data: {
-                    labels: top5ForTimeliness.map(i => i.name.length > 30 ? i.name.substring(0, 30) + '...' : i.name),
-                    datasets: [
-                        {
-                            label: 'Видано вчасно',
-                            data: top5ForTimeliness.map(i => i.inTime),
-                            backgroundColor: '#10b981',
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'З порушенням терміну',
-                            data: top5ForTimeliness.map(i => i.late),
-                            backgroundColor: '#f43f5e',
-                            borderRadius: 4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 12 } } }
-                    },
-                    scales: {
-                        x: { grid: { display: false } },
-                        y: { grid: { color: '#f1f5f9' } }
-                    }
-                }
-            });
         }
 
-        function filterAndRenderTable(query) {
-            const tbody = document.getElementById('tableBody');
-            const q = query.toLowerCase().trim();
-
-            const filtered = parsedRows.filter(r => 
-                r.name.toLowerCase().includes(q) || r.dept.toLowerCase().includes(q)
-            );
-
-            document.getElementById('record-count').innerText = `${filtered.length} записів`;
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">Нічого не знайдено за вашим запитом</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = filtered.map(r => {
-                const effPct = r.registered > 0 ? Math.round((r.issued / r.registered) * 100) : 0;
-                let badgeColor = 'bg-slate-100 text-slate-700';
-                if (effPct >= 90) badgeColor = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-                else if (effPct >= 60) badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200';
-                else badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200';
-
-                return `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-3 font-medium text-slate-800">
-                            <div class="line-clamp-2" title="${r.name}">${r.name}</div>
-                            <div class="text-[10px] text-slate-400 font-normal mt-0.5">${r.dept}</div>
-                        </td>
-                        <td class="p-3 text-right font-semibold text-slate-700">${r.registered.toLocaleString('uk-UA')}</td>
-                        <td class="p-3 text-right text-slate-700">${r.issued.toLocaleString('uk-UA')}</td>
-                        <td class="p-3 text-right text-emerald-600 font-medium">${r.inTime.toLocaleString('uk-UA')}</td>
-                        <td class="p-3 text-right ${r.late > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'}">${r.late.toLocaleString('uk-UA')}</td>
-                        <td class="p-3 text-right ${r.refusals > 0 ? 'text-rose-700 font-medium' : 'text-slate-400'}">${r.refusals.toLocaleString('uk-UA')}</td>
-                        <td class="p-3 text-right ${r.pending > 0 ? 'text-amber-600 font-medium' : 'text-slate-400'}">${r.pending.toLocaleString('uk-UA')}</td>
-                        <td class="p-3 text-right">
-                            <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold ${badgeColor}">
-                                ${effPct}%
-                            </span>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+        function showStatusSuccess(msg) {
+            const alert = document.getElementById('statusAlert');
+            const alertText = document.getElementById('statusText');
+            alertText.innerText = msg;
+            alert.classList.remove('hidden');
         }
     </script>
 </body>
