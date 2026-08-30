@@ -234,6 +234,59 @@ footer.main-footer{font-size:12px}
   border-color:#cfdcf0;
 }
 
+
+/* ===== RESPONSIVE CENTER LOAD CHART ===== */
+.chart{
+  height:auto;
+  min-height:0;
+  position:relative;
+  padding-top:6px;
+}
+.chart svg{
+  display:block;
+  width:100%;
+  height:auto;
+  aspect-ratio:600 / 205;
+  overflow:visible;
+}
+.bar-legend{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px 18px;
+  margin-top:8px;
+  padding:10px 4px 2px;
+}
+.bar-legend-item{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  min-width:0;
+  color:#56657a;
+  font-size:10px;
+  font-weight:700;
+  line-height:1.35;
+}
+.bar-legend-color{
+  width:10px;
+  height:10px;
+  border-radius:3px;
+  flex:0 0 10px;
+  margin-top:2px;
+  box-shadow:0 0 0 2px rgba(255,255,255,.75);
+}
+.bar-legend-label{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+@media(max-width:700px){
+  .bar-legend{
+    grid-template-columns:1fr;
+    gap:7px;
+    margin-top:4px;
+  }
+  .bar-legend-item{font-size:11px}
+}
+
 </style>
 </head>
 <body>
@@ -260,7 +313,7 @@ footer.main-footer{font-size:12px}
     <div class="hero">
       <div class="hero-main">
         <div class="hero-label"><span class="hero-dot"></span> ПЕРІОД ЗВІТУ</div>
-        <h2>01.01.2022 <span>—</span> 28.08.2026</h2>
+        <h2>01.01.2022 <span>—</span> по теперішній час</h2>
         <p>Зведена статистика роботи центрів надання адміністративних послуг м. Дніпра</p>
       </div>
       <div class="hero-side">
@@ -419,10 +472,18 @@ function renderOverview(){
     <div><small>НА РОЗГЛЯДІ</small><b data-target="${tot.rev}">0</b><span>Поточний стан</span></div>
   `;
 
-  // SVG Bar Chart
+  // SVG Bar Chart + compact legend below
   let maxR=Math.max(...X.centers.map(c=>c.registered));
+  const centerLegend = X.centers.map((c,i)=>{
+    let shortName = c.center.replace('Центр надання адміністративних послуг м. Дніпра ','');
+    return `<div class="bar-legend-item">
+      <span class="bar-legend-color" style="background:${COLORS[i%COLORS.length]}"></span>
+      <span class="bar-legend-label">${E(shortName)}</span>
+    </div>`;
+  }).join('');
+
   $('#bars').innerHTML=`
-    <svg viewBox="0 0 600 270">
+    <svg viewBox="0 0 600 205" preserveAspectRatio="xMidYMid meet">
       ${X.centers.map((c,i)=>{
         let h=(c.registered/maxR)*140;
         let x=45+i*88;
@@ -432,11 +493,11 @@ function renderOverview(){
           <g class="bar-group" data-title="${E(shortName)}" data-val="${F(c.registered)}">
             <rect class="bar-rect" x="${x}" y="170" width="42" height="0" rx="6" fill="${COLORS[i%COLORS.length]}" data-h="${h}" data-y="${y}"/>
             <text class="bar-text-val" x="${x+21}" y="${y-8}" text-anchor="middle" font-size="9" fill="#172033" font-weight="bold">${(c.registered/1000).toFixed(1)}k</text>
-            <text x="${x+18}" y="185" transform="rotate(30, ${x+18}, 185)" text-anchor="start" font-size="8" fill="#64748b" font-weight="600">${E(shortName.slice(0, 16))}${shortName.length>16?'…':''}</text>
           </g>
         `;
       }).join('')}
     </svg>
+    <div class="bar-legend">${centerLegend}</div>
   `;
 
   // Tooltips for Bars
