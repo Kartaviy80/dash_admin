@@ -356,6 +356,162 @@ footer.main-footer{font-size:14px}
 }
 </style>
 
+
+<style>
+/* ===== LARGE SCREEN READABILITY + 3x2 CHART LEGEND ===== */
+@media (min-width: 1051px){
+  body{font-size:18px}
+
+  header{padding-left:34px;padding-right:34px}
+  .brand b{font-size:19px}
+  .brand small{font-size:13px}
+  nav.top-nav a{font-size:15px;padding:10px 16px}
+
+  .wrap{padding-left:34px;padding-right:34px}
+  .section-title{font-size:30px}
+  .section-desc{font-size:15px}
+
+  .hero{padding:28px 32px;min-height:150px}
+  .hero-label{font-size:13px}
+  .hero h2{font-size:39px}
+  .hero p{font-size:15px}
+  .hero em{font-size:14px}
+
+  .kpis>div{padding:19px 20px 17px;min-height:122px}
+  .kpis small{font-size:13px}
+  .kpis b{font-size:35px}
+  .kpis span{font-size:12px}
+
+  article{padding:21px}
+  h3{font-size:19px}
+  h3 small{font-size:12px}
+
+  .bar-text-val{font-size:13px !important}
+  .bar-legend{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px 22px;
+    margin-top:10px;
+    padding:12px 4px 3px;
+  }
+  .bar-legend-item{
+    font-size:13px;
+    line-height:1.4;
+  }
+  .bar-legend-color{
+    width:11px;
+    height:11px;
+    flex-basis:11px;
+  }
+
+  .donut #leg div{font-size:12px}
+  .pr>b{font-size:12px}
+  .rr{font-size:12px}
+  .rr strong{font-size:12px}
+
+  .card h3{font-size:17px}
+  .card-eff-head{font-size:11px}
+  .metrics b{font-size:18px}
+  .metrics small{font-size:11px}
+
+  .tools input,.tools select{font-size:14px}
+  th,td{font-size:13px;padding:12px 14px}
+  th{font-size:12px}
+}
+</style>
+
+
+<style>
+/* ===== FINAL READABILITY + RESPONSIVE RESULT STRUCTURE DONUT ===== */
+@media (min-width:1051px){
+  body{font-size:19px}
+  .brand b{font-size:20px}
+  .brand small{font-size:14px}
+  nav.top-nav a{font-size:16px}
+  .section-title{font-size:32px}
+  .section-desc{font-size:16px}
+  .hero-label{font-size:14px}
+  .hero h2{font-size:42px}
+  .hero p{font-size:16px}
+  .hero em{font-size:15px}
+  .kpis small{font-size:14px}
+  .kpis b{font-size:38px}
+  .kpis span{font-size:13px}
+  h3{font-size:20px}
+  h3 small{font-size:13px}
+  .card h3{font-size:18px}
+  .metrics b{font-size:19px}
+  .metrics small{font-size:12px}
+  .tools input,.tools select{font-size:15px}
+  th,td{font-size:14px}
+  th{font-size:13px}
+  .bar-legend-item{font-size:14px}
+  .chart-tooltip{font-size:13px}
+  .pr>b,.rr{font-size:13px}
+  .rr strong{font-size:13px}
+
+  /* Donut uses the available width of its parent and stays perfectly square. */
+  .donut{
+    display:grid;
+    grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);
+    align-items:center;
+    justify-content:center;
+    gap:20px;
+    min-height:0;
+    padding:12px 4px;
+  }
+  .donut .dw{
+    width:min(100%, 400px);
+    height:auto;
+    aspect-ratio:1 / 1;
+    flex:0 0 auto;
+    justify-self:center;
+    transform:translateY(28px);
+  }
+  .donut #leg{
+    gap:13px;
+    width:100%;
+  }
+  .donut #leg div{
+    grid-template-columns:11px 1fr auto;
+    gap:9px;
+    font-size:14px;
+    align-items:center;
+  }
+  .donut #leg i{width:11px;height:11px}
+  .donut #leg div b{font-size:15px}
+  .dw b{font-size:34px}
+}
+
+@media (max-width:1050px) and (min-width:701px){
+  .donut{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,.9fr);
+    align-items:center;
+    gap:14px;
+  }
+  .donut .dw{
+    width:min(100%, 300px);
+    height:auto;
+    aspect-ratio:1 / 1;
+    justify-self:center;
+  }
+  .donut #leg div{font-size:13px}
+  .donut #leg div b{font-size:14px}
+}
+
+@media (max-width:700px){
+  .donut .dw{
+    width:min(100%, 78vw);
+    height:auto;
+    aspect-ratio:1 / 1;
+    flex-basis:auto;
+  }
+  .donut #leg div{font-size:12px}
+  .donut #leg div b{font-size:13px}
+  .dw b{font-size:24px}
+}
+</style>
+
 </head>
 <body>
 
